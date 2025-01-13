@@ -2,9 +2,11 @@ from flask import Flask, render_template, request, redirect, url_for
 from models import db, User, Workout_Sessions, Exercises, Exercise_Log, Routines, Routine_Exercises
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
+from flask_cors import CORS
 
 
 app = Flask(__name__)
+CORS(app)
 
 # Disables the modification tracking system to save memory.
 # It is recommended to disable it unless you need to use it.
