@@ -1,23 +1,38 @@
+import { useState } from "react";
 
-function ListGroup() {
-  let items = [
-    "An item",
-    "A second item",
-    "A third item",
-    "A fourth item",
-    "And a fifth one",
-  ];
+// { items: [], heading: string }
+interface Props {
+  items: string[];
+  heading: string;
+  onSelectItem: (item: string) => void;
+}
 
-  
+function ListGroup({ items, heading, onSelectItem }: Props) {
+  //hook
+  const [selectedIndex, setSelectedIndex] = useState(-1);
 
-  
-    return (
+  return (
     <>
-        <h2>List Group</h2>
-        {items.length === 0 && <p>No items to display</p>}
-        <ul className="list-group">
-            {items.map(item => <li className="list-group-item" key={item}>{item}</li>)}
-        </ul>
+      <h2>{heading}</h2>
+      {items.length === 0 && <p>No items to display</p>}
+      <ul className="list-group">
+        {items.map((item, index) => (
+          <li
+            className={
+              selectedIndex === index
+                ? "list-group-item active"
+                : "list-group-item"
+            }
+            key={item}
+            onClick={() => {
+              setSelectedIndex(index);
+              onSelectItem(item);
+            }}
+          >
+            {item}
+          </li>
+        ))}
+      </ul>
     </>
   );
 }

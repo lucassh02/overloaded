@@ -1,12 +1,16 @@
-import ListGroup from "./components/ListGroup";
+import Alert from "./components/Alert";
+import Button from "./components/Button";
 
 function App() {
-  return <div><ListGroup /></div>
+  return (
+    <div>
+      <Alert>Hello <span> hi </span>World</Alert>
+      <Button color="secondary" onClick={() => console.log('clicked')}>test</Button>
+    </div>
+  );
 }
 
-export default App
-
-
+export default App;
 
 /*
 import { useState } from 'react'
