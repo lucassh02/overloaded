@@ -8,7 +8,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(50), nullable=False, unique=True)
     email = db.Column(db.String(100), nullable=False, unique=True)
-    password_hash = db.Column(db.String(100), nullable=False, unqiue=True)
+    password_hash = db.Column(db.String(100), nullable=False, unique=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
