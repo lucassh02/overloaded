@@ -11,6 +11,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(100), nullable=False, unique=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
+    
 
     def __repr__(self):
         return f'<User {self.username}>'
