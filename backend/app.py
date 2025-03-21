@@ -204,30 +204,43 @@ def delete_user(user_id):
 
 # Create workout session
 @app.route('/workouts', methods=['POST'])
+@jwt_required()
 def create_workout():
+    user_id = get_jwt_identity()  # Get logged-in user's ID
     data = request.json
+    if not data or not data.get('date') or not data.get('duration') or not data.get('workout_type'):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    
     new_workout = Workout_Sessions(
-        user_id=data['user_id'],
+        user_id=user_id,
         date=datetime.strptime(data['date'], '%Y-%m-%d'),  # Convert date string to datetime object
         duration=data['duration'],
         workout_type=data['workout_type']
     )
+
+
     db.session.add(new_workout)
     db.session.commit()
     return jsonify({"message": "Workout session created", "id": new_workout.id}), 201
 
 # Get all workout sessions
 @app.route('/workouts', methods=['GET'])
+@jwt_required()
 def get_workouts():
-    workouts = Workout_Sessions.query.all()
+
+    user_id = get_jwt_identity()
+    workouts = Workout_Sessions.query.filter_by(user_id=user_id).all()
+
     return jsonify([{
         "id": w.id,
-        "user_id": w.user_id,
         "date": w.date.strftime('%Y-%m-%d'),  # Convert datetime object to date string
         "duration": w.duration,
         "workout_type": w.workout_type
     } for w in workouts]), 200
 
+
+'''
 # Get a specific workout session
 @app.route('/workouts/<int:workout_id>', methods=['GET'])
 def get_workout(workout_id):
@@ -240,6 +253,7 @@ def get_workout(workout_id):
         "workout_type": workout.workout_type
     })
 
+
 # Update a workout session
 @app.route('/workouts/<int:workout_id>', methods=['PUT'])
 def update_workout(workout_id):
@@ -251,11 +265,18 @@ def update_workout(workout_id):
         workout.date = datetime.strptime(data['date'], '%Y-%m-%d')  # Convert date string to datetime object
     db.session.commit()
     return jsonify({"message": "Workout updated"}), 200
+'''
 
 # Delete a workout session
 @app.route('/workouts/<int:workout_id>', methods=['DELETE'])
+@jwt_required()
 def delete_workout(workout_id):
+    user_id = get_jwt_identity()
     workout = Workout_Sessions.query.get_or_404(workout_id)
+    print(f"🔍 Debug: workout.user_id={workout.user_id}, user_id={user_id}")
+    if workout.user_id != int(user_id):
+        return jsonify({'error': 'Unauthorized'}), 403
+
     db.session.delete(workout)
     db.session.commit()
     return jsonify({"message": "Workout deleted"}), 200

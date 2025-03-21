@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from "react";
 import { loginUser, getUserProfile } from "../api";
 import { User, AuthContextType } from "../types";
+import useLocalStorage from "../hooks/useLocalStorage";
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -9,15 +10,15 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(
-    localStorage.getItem("token")
-  );
+  const [user, setUser] = useLocalStorage<User | null>("user", null);
+  const [token, setToken] = useLocalStorage<string | null>("token", null);
 
   useEffect(() => {
     if (token) {
       const userId = localStorage.getItem("userId");
       if (userId) {
+        console.log("Token before fetching profile:", token);
+        console.log("User ID before fetching profile:", userId);
         getUserProfile(Number(userId), token)
           .then((res) => setUser(res))
           .catch(() => logout());
@@ -28,10 +29,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       const res = await loginUser({ email, password });
+
+      console.log("Login response:", res); // Debugging line
+      if (!res.access_token) throw new Error("No token received");
+
       setToken(res.access_token);
       setUser({ id: res.user_id, username: "", email });
-      localStorage.setItem("token", res.access_token);
-      localStorage.setItem("userId", res.user_id.toString());
     } catch (error) {
       console.error("Login failed", error);
     }
@@ -40,8 +43,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
   };
 
   return (
