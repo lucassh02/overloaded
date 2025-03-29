@@ -3,3 +3,11 @@
 
 # Ignore 
 /backend/venv
+
+/backend/__pycache__
+# Ignore Python cache files
+
+/backend/.env
+# Ignore environment variables
+
+/database

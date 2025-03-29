@@ -1,23 +1,25 @@
 from flask import Flask, request, jsonify
 from models import db, User, Workout_Sessions, Exercises, Exercise_Log, Routines, Routine_Exercises
 from flask_cors import CORS
-from flask_migrate import upgrade
+from flask_migrate import upgrade, Migrate 
 from datetime import datetime, timedelta
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_jwt_extended.exceptions import NoAuthorizationError, InvalidHeaderError
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
-basedir = os.path.abspath(os.path.dirname(__file__))  # Get absolute path of backend/
-db_path = os.path.join(basedir, "database/workout.db")  # Move up and into database/
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Configure JWT secret key (Change this in production!)
-app.config['JWT_SECRET_KEY'] = 'supersecretkey'
+app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY")
 
 db.init_app(app)
+migrate = Migrate(app, db)
 
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
