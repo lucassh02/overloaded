@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useEffect, ReactNode } from "react";
 import { loginUser, getUserProfile } from "../api";
 import { User, AuthContextType } from "../types";
 import useLocalStorage from "../hooks/useLocalStorage";
