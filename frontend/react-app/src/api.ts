@@ -1,6 +1,6 @@
 import { User, LoginResponse , Workout } from "./types";
 
-const API_URL = "http://127.0.0.1:5000"; // Flask backend URL
+const API_URL = import.meta.env.VITE_API_URL;  // Ensure the API_URL is defined
 
 const request = async <T>(
   endpoint: string,
