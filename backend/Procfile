@@ -1,1 +1,1 @@
-web: flask db upgrade && gunicorn app:app
+web: echo "Running DB upgrade..." && flask db upgrade && echo "Done upgrading." && gunicorn app:app
