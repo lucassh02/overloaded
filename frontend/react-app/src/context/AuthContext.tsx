@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, ReactNode } from "react";
+import React, { createContext, useEffect, ReactNode, useContext } from "react";
 import { loginUser, getUserProfile } from "../api";
 import { User, AuthContextType } from "../types";
 import useLocalStorage from "../hooks/useLocalStorage";
@@ -51,3 +51,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+
+export const useAuth = () => useContext(AuthContext);

@@ -1,22 +1,18 @@
 import React from "react";
-import { Routes, Route, Link } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import WorkoutLog from "./components/WorkoutLog";
 import ProtectedRoute from "./components/ProtectedRoute";
+import NavBar from "./components/NavBar";
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <nav>
-        <Link to="/">Home</Link> |<Link to="/register">Register</Link> |
-        <Link to="/login">Login</Link> |<Link to="/dashboard">Dashboard</Link> |
-        <Link to="/test">Test</Link>
-      </nav>
+    <>
+      <NavBar />
       <Routes>
-        <Route path="/" element={<h2>Home Page</h2>} />
+        <Route path="/" element={<Navigate to="/dashboard" />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route
@@ -36,7 +32,7 @@ const App: React.FC = () => {
           }
         />
       </Routes>
-    </AuthProvider>
+    </>
   );
 };
 
