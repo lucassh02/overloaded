@@ -13,20 +13,38 @@ const NavBar: React.FC = () => {
   };
 
   return (
-    <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc" }}>
-      {auth?.user ? (
-        <>
-          <Link to="/dashboard">Dashboard</Link> |{" "}
-          <Link to="/workouts">Workouts</Link> |{" "}
-          <button onClick={handleLogout} style={{ cursor: "pointer" }}>
-            Logout
-          </button>
-        </>
-      ) : (
-        <>
-          <Link to="/login">Login</Link> | <Link to="/register">Register</Link>
-        </>
-      )}
+    <nav className="bg-light py-3 border-bottom">
+      <div className="container d-flex justify-content-center align-items-center gap-3">
+        {auth?.user ? (
+          <>
+            <Link className="text-decoration-none" to="/dashboard">
+              Dashboard
+            </Link>
+            <span>|</span>
+            <Link className="text-decoration-none" to="/workouts">
+              Workouts
+            </Link>
+            <span>|</span>
+            <button
+              onClick={handleLogout}
+              className="btn btn-outline-danger btn-sm"
+              style={{ marginLeft: "0.5rem" }}
+            >
+              Logout
+            </button>
+          </>
+        ) : (
+          <>
+            <Link className="text-decoration-none" to="/login">
+              Login
+            </Link>
+            <span>|</span>
+            <Link className="text-decoration-none" to="/register">
+              Register
+            </Link>
+          </>
+        )}
+      </div>
     </nav>
   );
 };
