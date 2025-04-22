@@ -7,7 +7,6 @@ const Dashboard: React.FC = () => {
   return (
     <div>
       <h2>Welcome, {auth?.user?.email || "User"}</h2>
-      <button onClick={auth?.logout}>Logout</button>
     </div>
   );
 };

@@ -6,15 +6,46 @@ const Register: React.FC = () => {
   const [username, setUsername] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const sanitizedEmail = email.trim().toLowerCase();
+    const sanitizedUsername = username.trim();
+
+    if (!sanitizedUsername || !sanitizedEmail || !password) {
+      setError("Please fill out all fields.");
+      return;
+    }
+
+    if (!emailRegex.test(sanitizedEmail)) {
+      setError("The email address format is invalid. Please try again.");
+      return;
+    }
+
     try {
-      await registerUser({ username, email, password });
+      setLoading(true);
+      setError(null); // Clear any previous errors
+      await registerUser({
+        username: sanitizedUsername,
+        email: sanitizedEmail,
+        password: password,
+      });
       navigate("/login");
-    } catch (error) {
-      console.error("Registration failed", error);
+    } catch (err: any) {
+      if (err.message) {
+        setError(err.message); // Display the error message from the backend
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
+      console.error("Registration failed", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -24,6 +55,7 @@ const Register: React.FC = () => {
         <div className="col-md-4">
           <h2 className="text-center mb-4">Register</h2>
           <form onSubmit={handleSubmit} className="border p-4 rounded shadow">
+            {error && <div className="alert alert-danger">{error}</div>}
             <div className="mb-3">
               <input
                 type="text"
@@ -54,8 +86,12 @@ const Register: React.FC = () => {
                 required
               />
             </div>
-            <button type="submit" className="btn btn-success w-100">
-              Register
+            <button
+              type="submit"
+              className="btn btn-success w-100"
+              disabled={loading}
+            >
+              {loading ? "Registering..." : "Register"}
             </button>
           </form>
         </div>

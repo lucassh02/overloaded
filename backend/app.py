@@ -7,7 +7,9 @@ from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_jwt_extended.exceptions import NoAuthorizationError, InvalidHeaderError
 import os
+import re
 from dotenv import load_dotenv
+from sqlalchemy.exc import IntegrityError
 load_dotenv()
 
 
@@ -28,12 +30,17 @@ jwt = JWTManager(app)
 def home():
     return {"message": "Flask API is running!"}, 200
 
+EMAIL_REGEX = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+USERNAME_REGEX = r'^[a-zA-Z0-9_.+-]+$'
+PASSWORD_REGEX = r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$'
+
 @app.before_request
 def log_request_info():
     print(f"Incoming Request: {request.method} {request.url}")
     print("Headers:", dict(request.headers))
     if 'Authorization' in request.headers:
         print("Auth header:", request.headers['Authorization'])
+
 
 @jwt.invalid_token_loader
 def invalid_token_callback(error):
@@ -69,42 +76,83 @@ def login_test():
         return jsonify({"access_token": "mock-jwt-token"}), 200
     return jsonify({"error": "Invalid credentials"}), 401
 
+def sanitize_input(data):
+    """Sanitize user input by trimming whitespace and normalizing case for emails."""
+    return {
+        "email": data.get("email", "").strip().lower(),
+        "username": data.get("username", "").strip(),
+        "password": data.get("password", "").strip()
+    }
 
+def validate_registration_data(email, username, password):
+    """Validate registration inputs."""
+    if not re.match(EMAIL_REGEX, email):
+        return "Invalid email format"
+    if not re.match(USERNAME_REGEX, username):
+        return "Invalid username format"
+    if not re.match(PASSWORD_REGEX, password):
+        return "Password must be at least 8 characters long and contain at least one letter and one number"
+    return None
 
+def validate_login_data(email, password):
+    """Validate login inputs."""
+    if not email or not password:
+        return "Email and password are required"
+    if not re.match(EMAIL_REGEX, email):
+        return "Invalid email format"
+    return None
 
 # User Registration
 @app.route('/register', methods=['POST'])
 def register():
-    data = request.json
-    if not data or not data.get('username') or not data.get('email') or not data.get('password'):
-        return jsonify({'error': 'Missing required fields'}), 400
-    
-    existing_user = User.query.filter_by(email=data['email']).first()
-    if existing_user:
-        return jsonify({'error': 'Email already in use'}), 400
+    data = sanitize_input(request.json)
 
-    hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
-    new_user = User(username=data['username'], email=data['email'], password_hash=hashed_password)
-    
-    db.session.add(new_user)
-    db.session.commit()
+    # Validate inputs
+    validation_error = validate_registration_data(data["email"], data["username"], data["password"])
+    if validation_error:
+        return jsonify({"error": validation_error}), 400
 
-    return jsonify({'message': 'User registered successfully'}), 201
+    try:
+        # Check for duplicate email or username
+        if User.query.filter_by(email=data["email"]).first():
+            return jsonify({"error": "Email already in use"}), 400
+        if User.query.filter_by(username=data["username"]).first():
+            return jsonify({"error": "Username already in use"}), 400
+
+        # Create new user
+        hashed_password = bcrypt.generate_password_hash(data["password"]).decode('utf-8')
+        new_user = User(username=data["username"], email=data["email"], password_hash=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({"message": "User registered successfully"}), 201
+
+    except IntegrityError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database integrity error"}), 500
+
+    except Exception as e:
+        print(f"Unexpected error during registration: {e}")
+        return jsonify({"error": "Unexpected server error"}), 500
 
 # User Login
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.json
-    if not data or not data.get('email') or not data.get('password'):
-        return jsonify({'error': 'Missing email or password'}), 400
-    
-    user = User.query.filter_by(email=data['email']).first()
-    if not user or not bcrypt.check_password_hash(user.password_hash, data['password']):
-        return jsonify({'error': 'Invalid credentials'}), 401
+    data = sanitize_input(request.json)
 
+    # Validate inputs
+    validation_error = validate_login_data(data["email"], data["password"])
+    if validation_error:
+        return jsonify({"error": validation_error}), 400
+
+    # Authenticate user
+    user = User.query.filter_by(email=data["email"]).first()
+    if not user or not bcrypt.check_password_hash(user.password_hash, data["password"]):
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    # Generate JWT token
     access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=1))
-    #refresh_token = create_refresh_token(identity=user.id)
-    return jsonify({'access_token': access_token, 'user_id': str(user.id)}), 200
+    return jsonify({"access_token": access_token, "user_id": str(user.id)}), 200
 
 '''
 # Token Refresh
@@ -173,6 +221,7 @@ def update_user(user_id):
 
     user = User.query.get_or_404(user_id)
     data = request.json
+    # Validation is already handled in @app.before_request
     if 'username' in data:
         user.username = data['username']
     if 'email' in data:

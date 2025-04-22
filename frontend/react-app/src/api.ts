@@ -16,14 +16,23 @@ const request = async <T>(
 
   const response = await fetch(`${API_URL}${endpoint}`, options);
   if (!response.ok) {
-    throw new Error(`HTTP error! Status: ${response.status}`);
+    const errorData = await response.json();
+    throw new Error(errorData?.error || `HTTP error! Status: ${response.status}`);
   }
+  
   return response.json();
 };
 
 // Register user
-export const registerUser = (userData: { username: string; email: string; password: string }) => {
-  return request<{ message: string }>("/register", "POST", userData);
+export const registerUser = async (userData: { username: string; email: string; password: string }) => {
+  try {
+    return await request<{ message: string }>("/register", "POST", userData);
+  } catch (err: any) {
+    if (err.message) {
+      throw new Error(err.message); // Pass the backend error message to the frontend
+    }
+    throw new Error("An unexpected error occurred.");
+  }
 };
 
 // Login user
