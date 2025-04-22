@@ -37,6 +37,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser({ id: res.user_id, username: "", email });
     } catch (error) {
       console.error("Login failed", error);
+      throw error; // Ensure the error propagates to Login.tsx
     }
   };
 
@@ -51,6 +52,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
 
 export const useAuth = () => useContext(AuthContext);

@@ -16,7 +16,7 @@ const Register: React.FC = () => {
     e.preventDefault();
 
     const sanitizedEmail = email.trim().toLowerCase();
-    const sanitizedUsername = username.trim();
+    const sanitizedUsername = username.trim().toLocaleLowerCase();
 
     if (!sanitizedUsername || !sanitizedEmail || !password) {
       setError("Please fill out all fields.");

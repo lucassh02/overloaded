@@ -3,6 +3,7 @@ import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const Login: React.FC = () => {
+  console.log("Login component rendered");
   const auth = useContext(AuthContext);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -13,10 +14,12 @@ const Login: React.FC = () => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent default form submission behavior
 
+    // Sanitize inputs
     const sanitizedEmail = email.trim().toLowerCase();
 
+    // Validate inputs
     if (!sanitizedEmail || !password) {
       setError("Please enter both email and password.");
       return;
@@ -29,17 +32,23 @@ const Login: React.FC = () => {
 
     try {
       setLoading(true);
-      setError(null);
+      setError(null); // Clear any previous errors
+
       if (auth) {
+        console.log("Navigating to dashboard...");
         await auth.login(sanitizedEmail, password);
         navigate("/dashboard");
+        console.log("Navigation complete.");
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      if (err.response && err.response.status === 401) {
-        setError("Invalid email or password.");
-      } else if (err.response && err.response.status === 400) {
-        setError("Missing email or password.");
+      console.log("Error object:", err);
+
+      // Handle backend error response
+      if (err.response && err.response.data && err.response.data.error) {
+        setError(err.response.data.error);
+      } else if (err.message) {
+        setError(err.message);
       } else {
         setError("An unexpected error occurred. Please try again.");
       }
@@ -53,7 +62,12 @@ const Login: React.FC = () => {
       <div className="row justify-content-center">
         <div className="col-md-4">
           <h2 className="text-center mb-4">Login</h2>
-          <form onSubmit={handleSubmit} className="border p-4 rounded shadow">
+          <form
+            onSubmit={handleSubmit}
+            noValidate
+            className="border p-4 rounded shadow"
+          >
+            {/* Render error alert */}
             {error && <div className="alert alert-danger">{error}</div>}
             <div className="mb-3">
               <input

@@ -80,7 +80,7 @@ def sanitize_input(data):
     """Sanitize user input by trimming whitespace and normalizing case for emails."""
     return {
         "email": data.get("email", "").strip().lower(),
-        "username": data.get("username", "").strip(),
+        "username": data.get("username", "").strip().lower(),
         "password": data.get("password", "").strip()
     }
 
