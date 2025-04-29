@@ -31,9 +31,9 @@ class Workout_Sessions(db.Model):
 class Exercises(db.Model):
     __tablename__ = 'exercises'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     name = db.Column(db.String(50), nullable=False)
     muscle_group = db.Column(db.String(50), nullable=False)
-    #how to make this only a list of certain values
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     def __repr__(self):
@@ -56,7 +56,7 @@ class Exercise_Log(db.Model):
 class Routines(db.Model):
     __tablename__ = 'routines'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     name = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
