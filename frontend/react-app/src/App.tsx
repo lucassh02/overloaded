@@ -4,6 +4,7 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import WorkoutLog from "./components/WorkoutLog";
+import LogWorkout from "./components/LogWorkout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NavBar from "./components/NavBar";
 
@@ -28,6 +29,14 @@ const App: React.FC = () => {
           element={
             <ProtectedRoute>
               <WorkoutLog />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/log-workout/:sessionId"
+          element={
+            <ProtectedRoute>
+              <LogWorkout />
             </ProtectedRoute>
           }
         />

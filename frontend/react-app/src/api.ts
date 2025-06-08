@@ -1,4 +1,4 @@
-import { User, LoginResponse , Workout } from "./types";
+import { User, LoginResponse , Workout, ExerciseEntry, ExerciseOption } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL;  // Ensure the API_URL is defined
 
@@ -51,6 +51,21 @@ export const fetchWorkouts = (token: string) => {
   return request<Workout[]>("/workouts", "GET", null, token);
 };
 
+// Fetch all user-created exercises for logged-in user
+export const fetchExercises = (token: string) => {
+  return request<ExerciseOption[]>("/exercises", "GET", null, token);
+};
+
+export const startWorkoutSession = (token: string, workoutType: string) => {
+  return request<{ message: string; session_id: number }>(
+    "/workout-sessions",
+    "POST",
+    { workout_type: workoutType },
+    token
+  );
+};
+
+
 // Add a new workout
 export const addWorkout = (
   token: string,
@@ -75,3 +90,44 @@ export const deleteWorkout = (token: string, workoutId: number) => {
     token
   );
 };
+
+export const addExerciseLog = (
+  token: string,
+  workoutSessionId: number,
+  exercise: ExerciseEntry
+) => {
+  const payload = {
+    workout_session_id: workoutSessionId,
+    ...exercise,
+  };
+
+  return request<{ message: string }>("/exercise-log", "POST", payload, token);
+};
+
+
+// Delete an exercise log
+export const deleteExerciseLog = (
+  token: string,
+  exerciseLogId: number
+) => {
+  return request<{ message: string }>(
+    `/exercise-log/${exerciseLogId}`,
+    "DELETE",
+    null,
+    token
+  );
+}
+
+
+// Fetch all exercise logs for a specific workout session
+export const fetchExerciseLogs = (
+  token: string,
+  workoutSessionId: number
+) => {
+  return request<ExerciseEntry[]>(
+    `/exercise-log/${workoutSessionId}`,
+    "GET",
+    null,
+    token
+  );
+}

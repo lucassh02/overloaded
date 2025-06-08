@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from models import db, User, Workout_Sessions, Exercises, Exercise_Log, Routines, Routine_Exercises
 from flask_cors import CORS
 from flask_migrate import upgrade, Migrate 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_jwt_extended.exceptions import NoAuthorizationError, InvalidHeaderError
@@ -253,6 +253,31 @@ def delete_user(user_id):
     return jsonify({'message': 'User deleted successfully'}), 200
 
 
+@app.route('/workout-sessions', methods=['POST'])
+@jwt_required()
+def start_workout_session():
+    user_id = get_jwt_identity()
+    data = request.get_json()
+
+    if not data or not data.get("workout_type"):
+        return jsonify({"error": "Workout type is required"}), 400
+
+    new_session = Workout_Sessions(
+        user_id=user_id,
+        workout_type=data["workout_type"],
+        date=datetime.now(timezone.utc),  # Corrected timezone usage
+        duration=0  # can update this later
+    )
+
+    db.session.add(new_session)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Workout session started",
+        "session_id": new_session.id
+    }), 201
+
+
 # Create workout session
 @app.route('/workouts', methods=['POST'])
 @jwt_required()
@@ -335,6 +360,16 @@ def delete_workout(workout_id):
 if __name__ == '__main__':
     app.run(debug=True)
 
+@app.route('/exercises', methods=['GET'])
+@jwt_required()
+def get_exercises():
+    user_id = get_jwt_identity()
+    exercises = Exercises.query.filter(
+        (Exercises.user_id == None) | (Exercises.user_id == user_id)
+    ).order_by(Exercises.name.asc()).all()
+
+    result = [{"id": ex.id, "name": ex.name} for ex in exercises]
+    return jsonify(result), 200
 
 
 

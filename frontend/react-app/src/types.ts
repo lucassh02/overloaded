@@ -22,4 +22,17 @@ export interface User {
     duration: number;
     workout_type: string;
   }
+
+  export interface ExerciseEntry {
+    exercise_id: number;
+    sets: number;
+    reps: number;
+    weight: number;
+    rpe: number;
+  }
+  
+  export interface ExerciseOption {
+    id: number;
+    name: string;
+  }
   
