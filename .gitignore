@@ -12,3 +12,7 @@
 
 /database
 
+__pycache__/
+*.pyc
+backend/migrations/.env
+*.db
