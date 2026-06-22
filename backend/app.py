@@ -32,7 +32,7 @@ def home():
 
 EMAIL_REGEX = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
 USERNAME_REGEX = r'^[a-zA-Z0-9_.+-]+$'
-PASSWORD_REGEX = r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$'
+PASSWORD_REGEX = r'^(?=.*[A-Za-z])(?=.*\d).{8,}$'
 
 @app.before_request
 def log_request_info():
@@ -357,8 +357,7 @@ def delete_workout(workout_id):
     db.session.commit()
     return jsonify({"message": "Workout deleted"}), 200
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
 
 @app.route('/exercises', methods=['GET'])
 @jwt_required()
@@ -371,7 +370,84 @@ def get_exercises():
     result = [{"id": ex.id, "name": ex.name} for ex in exercises]
     return jsonify(result), 200
 
+# Log a workout session
+@app.route('/exercise-log', methods=['POST'])
+@jwt_required()
+def add_exercise_log():
+    user_id = get_jwt_identity()
+    data = request.get_json()
 
+    required_fields = ['workout_session_id', 'exercise_id', 'sets', 'reps', 'weight']
+    if not data or not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
 
+    # Verify the workout session belongs to this user
+    session = Workout_Sessions.query.filter_by(
+        id=data['workout_session_id'],
+        user_id=user_id
+    ).first()
+    if not session:
+        return jsonify({"error": "Workout session not found or unauthorized"}), 404
+
+    new_log = Exercise_Log(
+        workout_session_id=data['workout_session_id'],
+        exercise_id=data['exercise_id'],
+        sets=data['sets'],
+        reps=data['reps'],
+        weight=data['weight'],
+        rpe=data.get('rpe')
+    )
+
+    db.session.add(new_log)
+    db.session.commit()
+
+    return jsonify({"message": "Exercise logged successfully", "id": new_log.id}), 201
+
+#new workout logging method using lazy creation
+@app.route('/log-workout', methods=['POST'])
+@jwt_required()
+def log_workout():
+    user_id = get_jwt_identity()
+    data = request.get_json()
+
+    if not data or not data.get('workout_type') or not data.get('exercises'):
+        return jsonify({"error": "Missing workout_type or exercises"}), 400
+
+    if len(data['exercises']) == 0:
+        return jsonify({"error": "Must log at least one exercise"}), 400
+
+    try:
+        # Create the session only if we have real exercises to save
+        new_session = Workout_Sessions(
+            user_id=user_id,
+            workout_type=data['workout_type'],
+            date=datetime.now(timezone.utc),
+            duration=0
+        )
+        db.session.add(new_session)
+        db.session.flush()  # gets us the new session ID without committing yet
+
+        # Log all exercises against that session
+        for ex in data['exercises']:
+            log = Exercise_Log(
+                workout_session_id=new_session.id,
+                exercise_id=ex['exercise_id'],
+                sets=ex['sets'],
+                reps=ex['reps'],
+                weight=ex['weight'],
+                rpe=ex.get('rpe')
+            )
+            db.session.add(log)
+
+        db.session.commit()  # commits everything at once
+        return jsonify({"message": "Workout logged successfully", "session_id": new_session.id}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error logging workout: {e}")
+        return jsonify({"error": "Failed to log workout"}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
 

@@ -32,15 +32,15 @@ with app.app_context():
         if not Exercises.query.first():
             seed_exercises()
         else:
-            logging.info("⚡ Exercises already seeded.")
+            logging.info("Exercises already seeded.")
 
         if not Routines.query.first():
             seed_routines()
         else:
-            logging.info("⚡ Routines already seeded.")
+            logging.info("outines already seeded.")
 
         db.session.commit()
         logging.info("🌱 Seeding complete!")
     except Exception as e:
-        logging.error(f"❌ Error during seeding: {e}")
+        logging.error(f"Error during seeding: {e}")
         db.session.rollback()

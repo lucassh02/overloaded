@@ -1,11 +1,10 @@
 import React, { useContext, useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import { fetchExercises, addExerciseLog } from "../api";
+import { fetchExercises, logWorkout } from "../api";
 import { ExerciseOption, ExerciseEntry } from "../types";
 
 const LogWorkout: React.FC = () => {
-  const { sessionId } = useParams();
   const auth = useContext(AuthContext);
   const [exercises, setExercises] = useState<ExerciseEntry[]>([
     { exercise_id: 0, sets: 3, reps: 10, weight: 0, rpe: 7 },
@@ -31,11 +30,10 @@ const LogWorkout: React.FC = () => {
   const handleExerciseChange = (
     index: number,
     field: keyof ExerciseEntry,
-    value: string | number
+    value: string | number,
   ) => {
     const updated = [...exercises];
-    updated[index][field] =
-      field === "exercise_id" ? Number(value) : Number(value);
+    updated[index][field] = Number(value);
     setExercises(updated);
   };
 
@@ -53,21 +51,23 @@ const LogWorkout: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth?.token) return;
-    if (!sessionId) {
-      setError("Session ID is missing.");
+
+    // Validate that at least one real exercise is selected
+    const validExercises = exercises.filter((ex) => ex.exercise_id !== 0);
+    if (validExercises.length === 0) {
+      setError("Please select at least one exercise before saving.");
       return;
     }
 
     try {
       setLoading(true);
-      for (const ex of exercises) {
-        await addExerciseLog(auth.token, Number(sessionId), ex);
-      }
+      setError(null);
+      await logWorkout(auth.token, "Lifting", validExercises);
       alert("Workout saved successfully!");
       navigate("/dashboard");
     } catch (err) {
-      console.error("Failed to log exercises:", err);
-      setError("Failed to log exercises. Please try again.");
+      console.error("Failed to log workout:", err);
+      setError("Failed to log workout. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -75,7 +75,7 @@ const LogWorkout: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit} className="mt-4 border p-4 rounded shadow">
-      <h3>Log Exercises for Workout #{sessionId}</h3>
+      <h3>Log Workout</h3>
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       {exercises.map((exercise, index) => (
@@ -97,43 +97,55 @@ const LogWorkout: React.FC = () => {
               ))}
             </select>
           </div>
-          <div className="d-flex gap-2">
-            <input
-              type="number"
-              className="form-control"
-              placeholder="Sets"
-              value={exercise.sets}
-              onChange={(e) =>
-                handleExerciseChange(index, "sets", e.target.value)
-              }
-            />
-            <input
-              type="number"
-              className="form-control"
-              placeholder="Reps"
-              value={exercise.reps}
-              onChange={(e) =>
-                handleExerciseChange(index, "reps", e.target.value)
-              }
-            />
-            <input
-              type="number"
-              className="form-control"
-              placeholder="Weight"
-              value={exercise.weight}
-              onChange={(e) =>
-                handleExerciseChange(index, "weight", e.target.value)
-              }
-            />
-            <input
-              type="number"
-              className="form-control"
-              placeholder="RPE"
-              value={exercise.rpe}
-              onChange={(e) =>
-                handleExerciseChange(index, "rpe", e.target.value)
-              }
-            />
+          <div className="d-flex gap-2 align-items-end">
+            <div className="flex-fill">
+              <label className="form-label small mb-1">Sets</label>
+              <input
+                type="number"
+                className="form-control"
+                placeholder="Sets"
+                value={exercise.sets}
+                onChange={(e) =>
+                  handleExerciseChange(index, "sets", e.target.value)
+                }
+              />
+            </div>
+            <div className="flex-fill">
+              <label className="form-label small mb-1">Reps</label>
+              <input
+                type="number"
+                className="form-control"
+                placeholder="Reps"
+                value={exercise.reps}
+                onChange={(e) =>
+                  handleExerciseChange(index, "reps", e.target.value)
+                }
+              />
+            </div>
+            <div className="flex-fill">
+              <label className="form-label small mb-1">Weight (lbs)</label>
+              <input
+                type="number"
+                className="form-control"
+                placeholder="Weight"
+                value={exercise.weight}
+                onChange={(e) =>
+                  handleExerciseChange(index, "weight", e.target.value)
+                }
+              />
+            </div>
+            <div className="flex-fill">
+              <label className="form-label small mb-1">RPE</label>
+              <input
+                type="number"
+                className="form-control"
+                placeholder="RPE"
+                value={exercise.rpe}
+                onChange={(e) =>
+                  handleExerciseChange(index, "rpe", e.target.value)
+                }
+              />
+            </div>
             <button
               type="button"
               className="btn btn-danger"

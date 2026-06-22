@@ -33,7 +33,7 @@ const App: React.FC = () => {
           }
         />
         <Route
-          path="/log-workout/:sessionId"
+          path="/log-workout/"
           element={
             <ProtectedRoute>
               <LogWorkout />
