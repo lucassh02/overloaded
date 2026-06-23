@@ -304,17 +304,35 @@ def create_workout():
 @app.route('/workouts', methods=['GET'])
 @jwt_required()
 def get_workouts():
-
     user_id = get_jwt_identity()
-    workouts = Workout_Sessions.query.filter_by(user_id=user_id).all()
+    workouts = Workout_Sessions.query.filter_by(
+        user_id=user_id
+    ).order_by(Workout_Sessions.date.desc()).all()
+
+    session_ids = [w.id for w in workouts]
+
+    # Grab all exercise logs for these sessions in ONE query, joined with exercise names
+    logs_by_session = {}
+    if session_ids:
+        logs = db.session.query(Exercise_Log, Exercises.name).join(
+            Exercises, Exercise_Log.exercise_id == Exercises.id
+        ).filter(Exercise_Log.workout_session_id.in_(session_ids)).all()
+
+        for log, exercise_name in logs:
+            logs_by_session.setdefault(log.workout_session_id, []).append({
+                "name": exercise_name,
+                "sets": log.sets,
+                "reps": log.reps,
+                "weight": log.weight,
+                "rpe": log.rpe
+            })
 
     return jsonify([{
         "id": w.id,
-        "date": w.date.strftime('%Y-%m-%d'),  # Convert datetime object to date string
-        "duration": w.duration,
-        "workout_type": w.workout_type
+        "date": w.date.strftime('%Y-%m-%d'),
+        "workout_type": w.workout_type,
+        "exercises": logs_by_session.get(w.id, [])
     } for w in workouts]), 200
-
 
 '''
 # Get a specific workout session
@@ -370,38 +388,8 @@ def get_exercises():
     result = [{"id": ex.id, "name": ex.name} for ex in exercises]
     return jsonify(result), 200
 
-# Log a workout session
-@app.route('/exercise-log', methods=['POST'])
-@jwt_required()
-def add_exercise_log():
-    user_id = get_jwt_identity()
-    data = request.get_json()
 
-    required_fields = ['workout_session_id', 'exercise_id', 'sets', 'reps', 'weight']
-    if not data or not all(field in data for field in required_fields):
-        return jsonify({"error": "Missing required fields"}), 400
 
-    # Verify the workout session belongs to this user
-    session = Workout_Sessions.query.filter_by(
-        id=data['workout_session_id'],
-        user_id=user_id
-    ).first()
-    if not session:
-        return jsonify({"error": "Workout session not found or unauthorized"}), 404
-
-    new_log = Exercise_Log(
-        workout_session_id=data['workout_session_id'],
-        exercise_id=data['exercise_id'],
-        sets=data['sets'],
-        reps=data['reps'],
-        weight=data['weight'],
-        rpe=data.get('rpe')
-    )
-
-    db.session.add(new_log)
-    db.session.commit()
-
-    return jsonify({"message": "Exercise logged successfully", "id": new_log.id}), 201
 
 #new workout logging method using lazy creation
 @app.route('/log-workout', methods=['POST'])
@@ -451,3 +439,36 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 
+""" OLD AND UNUSED
+# Log a workout session
+@app.route('/exercise-log', methods=['POST'])
+@jwt_required()
+def add_exercise_log():
+    user_id = get_jwt_identity()
+    data = request.get_json()
+
+    required_fields = ['workout_session_id', 'exercise_id', 'sets', 'reps', 'weight']
+    if not data or not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    # Verify the workout session belongs to this user
+    session = Workout_Sessions.query.filter_by(
+        id=data['workout_session_id'],
+        user_id=user_id
+    ).first()
+    if not session:
+        return jsonify({"error": "Workout session not found or unauthorized"}), 404
+
+    new_log = Exercise_Log(
+        workout_session_id=data['workout_session_id'],
+        exercise_id=data['exercise_id'],
+        sets=data['sets'],
+        reps=data['reps'],
+        weight=data['weight'],
+        rpe=data.get('rpe')
+    )
+
+    db.session.add(new_log)
+    db.session.commit()
+    return jsonify({"message": "Exercise logged successfully", "id": new_log.id}), 201
+"""
