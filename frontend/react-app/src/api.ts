@@ -6,8 +6,13 @@ import {
   ExerciseOption,
 } from "./types";
 
-const API_URL = import.meta.env.VITE_API_URL; // Ensure the API_URL is defined
+const API_URL = import.meta.env.VITE_API_URL;
 
+/**
+ * Core request helper. Wraps fetch with JSON headers, optional JWT auth,
+ * and consistent error handling — every API call below goes through this.
+ * The generic <T> lets each caller declare the shape of the response.
+ */
 const request = async <T>(
   endpoint: string,
   method: string = "GET",
@@ -31,7 +36,7 @@ const request = async <T>(
   return response.json();
 };
 
-// Register user
+// Create a new user account
 export const registerUser = async (userData: {
   username: string;
   email: string;
@@ -41,33 +46,33 @@ export const registerUser = async (userData: {
     return await request<{ message: string }>("/register", "POST", userData);
   } catch (err: any) {
     if (err.message) {
-      throw new Error(err.message); // Pass the backend error message to the frontend
+      throw new Error(err.message); // surface the backend's error message
     }
     throw new Error("An unexpected error occurred.");
   }
 };
 
-// Login user
+// Authenticate and receive a JWT access token
 export const loginUser = (userData: { email: string; password: string }) => {
   return request<LoginResponse>("/login", "POST", userData);
 };
 
-// Get user profile (requires token)
+// Fetch a user's profile (requires token)
 export const getUserProfile = (userId: number, token: string) => {
   return request<User>(`/user/${userId}`, "GET", null, token);
 };
 
-// Fetch all workouts for logged-in user
+// Fetch all workout sessions for the logged-in user, each with its exercises
 export const fetchWorkouts = (token: string) => {
   return request<Workout[]>("/workouts", "GET", null, token);
 };
 
-// Fetch all user-created exercises for logged-in user
+// Fetch the exercise list (global exercises + any the user created)
 export const fetchExercises = (token: string) => {
   return request<ExerciseOption[]>("/exercises", "GET", null, token);
 };
 
-// Log a complete workout (creates session + logs all exercises in one transaction)
+// Log a complete workout: creates the session and all exercise logs in one transaction
 export const logWorkout = (
   token: string,
   workoutType: string,
@@ -81,70 +86,11 @@ export const logWorkout = (
   );
 };
 
-export const startWorkoutSession = (token: string, workoutType: string) => {
-  return request<{ message: string; session_id: number }>(
-    "/workout-sessions",
-    "POST",
-    { workout_type: workoutType },
-    token,
-  );
-};
-
-// Add a new workout
-export const addWorkout = (
-  token: string,
-  date: string,
-  duration: number,
-  workoutType: string,
-) => {
-  return request<{ message: string; id: number }>(
-    "/workouts",
-    "POST",
-    { date, duration, workout_type: workoutType },
-    token,
-  );
-};
-
-// Delete a workout
+// Delete a workout session by ID
 export const deleteWorkout = (token: string, workoutId: number) => {
   return request<{ message: string }>(
     `/workouts/${workoutId}`,
     "DELETE",
-    null,
-    token,
-  );
-};
-
-/* OLD CALL, COULD BE USEFUL IN FUTURE
-export const addExerciseLog = (
-  token: string,
-  workoutSessionId: number,
-  exercise: ExerciseEntry,
-) => {
-  const payload = {
-    workout_session_id: workoutSessionId,
-    ...exercise,
-  };
-
-  return request<{ message: string }>("/exercise-log", "POST", payload, token);
-};
-*/
-
-// Delete an exercise log
-export const deleteExerciseLog = (token: string, exerciseLogId: number) => {
-  return request<{ message: string }>(
-    `/exercise-log/${exerciseLogId}`,
-    "DELETE",
-    null,
-    token,
-  );
-};
-
-// Fetch all exercise logs for a specific workout session
-export const fetchExerciseLogs = (token: string, workoutSessionId: number) => {
-  return request<ExerciseEntry[]>(
-    `/exercise-log/${workoutSessionId}`,
-    "GET",
     null,
     token,
   );

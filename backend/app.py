@@ -1,7 +1,15 @@
+"""
+Overloaded — Flask API
+
+Backend for a workout tracking app: JWT authentication, workout session
+logging, and exercise data. PostgreSQL via SQLAlchemy, Flask-Migrate for
+schema migrations.
+"""
+
 from flask import Flask, request, jsonify
 from models import db, User, Workout_Sessions, Exercises, Exercise_Log, Routines, Routine_Exercises
 from flask_cors import CORS
-from flask_migrate import upgrade, Migrate 
+from flask_migrate import Migrate 
 from datetime import datetime, timedelta, timezone
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
@@ -34,47 +42,15 @@ EMAIL_REGEX = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
 USERNAME_REGEX = r'^[a-zA-Z0-9_.+-]+$'
 PASSWORD_REGEX = r'^(?=.*[A-Za-z])(?=.*\d).{8,}$'
 
-@app.before_request
-def log_request_info():
-    print(f"Incoming Request: {request.method} {request.url}")
-    print("Headers:", dict(request.headers))
-    if 'Authorization' in request.headers:
-        print("Auth header:", request.headers['Authorization'])
-
 
 @jwt.invalid_token_loader
 def invalid_token_callback(error):
-    print(f"Invalid token error: {error}")
-    return jsonify({
-        'status': 422,
-        'sub_status': 'invalid_token',
-        'msg': 'Invalid token'
-    }), 422
+    return jsonify({"error": "Invalid token"}), 422
 
 @jwt.unauthorized_loader
 def missing_token_callback(error):
-    print(f"Missing token error: {error}")
-    return jsonify({
-        'status': 422,
-        'sub_status': 'missing_token',
-        'msg': 'Missing token'
-    }), 422
+    return jsonify({"error": "Missing token"}), 401
 
-@app.errorhandler(InvalidHeaderError)
-def handle_invalid_header_error(e):
-    print(f"Invalid header error: {e}")
-    return jsonify({
-        'status': 422,
-        'sub_status': 'invalid_header',
-        'msg': str(e)
-    }), 422
-
-@app.route("/test-login", methods=["POST"])
-def login_test():
-    data = request.json
-    if data["email"] == "test@example.com" and data["password"] == "password":
-        return jsonify({"access_token": "mock-jwt-token"}), 200
-    return jsonify({"error": "Invalid credentials"}), 401
 
 def sanitize_input(data):
     """Sanitize user input by trimming whitespace and normalizing case for emails."""
@@ -105,6 +81,7 @@ def validate_login_data(email, password):
 # User Registration
 @app.route('/register', methods=['POST'])
 def register():
+    """Create a new user account with a hashed password."""
     data = sanitize_input(request.json)
 
     # Validate inputs
@@ -138,6 +115,7 @@ def register():
 # User Login
 @app.route('/login', methods=['POST'])
 def login():
+    """Authenticate a user and return a JWT access token."""
     data = sanitize_input(request.json)
 
     # Validate inputs
@@ -154,26 +132,6 @@ def login():
     access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=1))
     return jsonify({"access_token": access_token, "user_id": str(user.id)}), 200
 
-'''
-# Token Refresh
-@app.route('/refresh', methods=['POST'])
-@jwt_refresh_token_required
-def refresh():
-    current_user = get_jwt_identity()
-    new_access_token = create_access_token(identity=current_user, expires_delta=timedelta(minutes=15))
-    return jsonify({'access_token': new_access_token}), 200
-'''
-
-# Protected Route (Example)
-@app.route('/protected', methods=['GET'])
-@jwt_required()
-def protected():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    return jsonify({'message': f'Hello {user.username}, you have accessed a protected route!'}), 200
 
 
 @app.errorhandler(NoAuthorizationError)
@@ -190,9 +148,9 @@ def handle_invalid_header_error(e):
 @app.route('/user/<string:user_id>', methods=['GET'])
 @jwt_required()
 def get_user(user_id):
+    """Return a user's profile. Only the account owner may access it."""
     try:
         current_user_id = get_jwt_identity()
-        print(f"🔍 Debug: current_user_id={current_user_id}, requested_user_id={user_id}")
 
         user = User.query.filter_by(id=user_id).first()
         if not user:
@@ -208,102 +166,17 @@ def get_user(user_id):
             "created_at": user.created_at
         }), 200
     except Exception as e:
-        print(f"🔥 Exception in /user/{user_id}: {e}")
+        print(f"Exception in /user/{user_id}: {e}")
         return jsonify({'error': 'Unexpected server error'}), 500
 
-# Update User Profile
-@app.route('/user/<int:user_id>', methods=['PUT'])
-@jwt_required()
-def update_user(user_id):
-    current_user_id = get_jwt_identity()
-    if current_user_id != user_id:
-        return jsonify({'error': 'Unauthorized access'}), 403
 
-    user = User.query.get_or_404(user_id)
-    data = request.json
-    # Validation is already handled in @app.before_request
-    if 'username' in data:
-        user.username = data['username']
-    if 'email' in data:
-        user.email = data['email']
-    
-    db.session.commit()
-    return jsonify({'message': 'User profile updated'}), 200
-
-# Delete User
-@app.route('/user/<int:user_id>', methods=['DELETE'])
-@jwt_required()
-# probably can make a decorator like
-# @user_auth()
-# that internally handles both the jwt_required() check AND grabbing the user's ID
-# directly from the JWT token so you know it's trusted
-# i.e. Matt calls the DELETE /user endpoint, and we extract the user ID from the JWT token
-# (and can trust it because it's signed with our secret), vs. having the user (browser) provide an ID
-# and having to remember to compare
-def delete_user(user_id):
-    current_user_id = get_jwt_identity()
-    if current_user_id != user_id:
-        return jsonify({'error': 'Unauthorized access'}), 403
-
- 
-
-    user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    return jsonify({'message': 'User deleted successfully'}), 200
-
-
-@app.route('/workout-sessions', methods=['POST'])
-@jwt_required()
-def start_workout_session():
-    user_id = get_jwt_identity()
-    data = request.get_json()
-
-    if not data or not data.get("workout_type"):
-        return jsonify({"error": "Workout type is required"}), 400
-
-    new_session = Workout_Sessions(
-        user_id=user_id,
-        workout_type=data["workout_type"],
-        date=datetime.now(timezone.utc),  # Corrected timezone usage
-        duration=0  # can update this later
-    )
-
-    db.session.add(new_session)
-    db.session.commit()
-
-    return jsonify({
-        "message": "Workout session started",
-        "session_id": new_session.id
-    }), 201
-
-
-# Create workout session
-@app.route('/workouts', methods=['POST'])
-@jwt_required()
-def create_workout():
-    user_id = get_jwt_identity()  # Get logged-in user's ID
-    data = request.json
-    if not data or not data.get('date') or not data.get('duration') or not data.get('workout_type'):
-        return jsonify({'error': 'Missing required fields'}), 400
-
-    
-    new_workout = Workout_Sessions(
-        user_id=user_id,
-        date=datetime.strptime(data['date'], '%Y-%m-%d'),  # Convert date string to datetime object
-        duration=data['duration'],
-        workout_type=data['workout_type']
-    )
-
-
-    db.session.add(new_workout)
-    db.session.commit()
-    return jsonify({"message": "Workout session created", "id": new_workout.id}), 201
 
 # Get all workout sessions
 @app.route('/workouts', methods=['GET'])
 @jwt_required()
 def get_workouts():
+    """Return the user's workout sessions, each with its logged exercises."""
+
     user_id = get_jwt_identity()
     workouts = Workout_Sessions.query.filter_by(
         user_id=user_id
@@ -334,40 +207,16 @@ def get_workouts():
         "exercises": logs_by_session.get(w.id, [])
     } for w in workouts]), 200
 
-'''
-# Get a specific workout session
-@app.route('/workouts/<int:workout_id>', methods=['GET'])
-def get_workout(workout_id):
-    workout = Workout_Sessions.query.get_or_404(workout_id)
-    return jsonify({
-        "id": workout.id,
-        "user_id": workout.user_id,
-        "date": workout.date.strftime('%Y-%m-%d'),  # Convert datetime object to date string
-        "duration": workout.duration,
-        "workout_type": workout.workout_type
-    })
 
-
-# Update a workout session
-@app.route('/workouts/<int:workout_id>', methods=['PUT'])
-def update_workout(workout_id):
-    workout = Workout_Sessions.query.get_or_404(workout_id)
-    data = request.json
-    workout.duration = data.get('duration', workout.duration)
-    workout.workout_type = data.get('workout_type', workout.workout_type)
-    if 'date' in data:
-        workout.date = datetime.strptime(data['date'], '%Y-%m-%d')  # Convert date string to datetime object
-    db.session.commit()
-    return jsonify({"message": "Workout updated"}), 200
-'''
 
 # Delete a workout session
 @app.route('/workouts/<int:workout_id>', methods=['DELETE'])
 @jwt_required()
 def delete_workout(workout_id):
+    """Delete a workout session owned by the authenticated user."""
+
     user_id = get_jwt_identity()
     workout = Workout_Sessions.query.get_or_404(workout_id)
-    print(f"🔍 Debug: workout.user_id={workout.user_id}, user_id={user_id}")
     if workout.user_id != int(user_id):
         return jsonify({'error': 'Unauthorized'}), 403
 
@@ -380,6 +229,8 @@ def delete_workout(workout_id):
 @app.route('/exercises', methods=['GET'])
 @jwt_required()
 def get_exercises():
+    """Return the global exercise list plus any the user created."""
+
     user_id = get_jwt_identity()
     exercises = Exercises.query.filter(
         (Exercises.user_id == None) | (Exercises.user_id == user_id)
@@ -389,12 +240,12 @@ def get_exercises():
     return jsonify(result), 200
 
 
-
-
 #new workout logging method using lazy creation
 @app.route('/log-workout', methods=['POST'])
 @jwt_required()
 def log_workout():
+    """Create a workout session and all its exercise logs in one transaction."""
+
     user_id = get_jwt_identity()
     data = request.get_json()
 
@@ -405,7 +256,7 @@ def log_workout():
         return jsonify({"error": "Must log at least one exercise"}), 400
 
     try:
-        # Create the session only if we have real exercises to save
+        # Create the session only if there are real exercises to save
         new_session = Workout_Sessions(
             user_id=user_id,
             workout_type=data['workout_type'],
@@ -413,7 +264,7 @@ def log_workout():
             duration=0
         )
         db.session.add(new_session)
-        db.session.flush()  # gets us the new session ID without committing yet
+        db.session.flush()  # gets the new session ID without committing yet
 
         # Log all exercises against that session
         for ex in data['exercises']:
@@ -427,7 +278,7 @@ def log_workout():
             )
             db.session.add(log)
 
-        db.session.commit()  # commits everything at once
+        db.session.commit()  # commit everything at once
         return jsonify({"message": "Workout logged successfully", "session_id": new_session.id}), 201
 
     except Exception as e:
@@ -439,36 +290,3 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 
-""" OLD AND UNUSED
-# Log a workout session
-@app.route('/exercise-log', methods=['POST'])
-@jwt_required()
-def add_exercise_log():
-    user_id = get_jwt_identity()
-    data = request.get_json()
-
-    required_fields = ['workout_session_id', 'exercise_id', 'sets', 'reps', 'weight']
-    if not data or not all(field in data for field in required_fields):
-        return jsonify({"error": "Missing required fields"}), 400
-
-    # Verify the workout session belongs to this user
-    session = Workout_Sessions.query.filter_by(
-        id=data['workout_session_id'],
-        user_id=user_id
-    ).first()
-    if not session:
-        return jsonify({"error": "Workout session not found or unauthorized"}), 404
-
-    new_log = Exercise_Log(
-        workout_session_id=data['workout_session_id'],
-        exercise_id=data['exercise_id'],
-        sets=data['sets'],
-        reps=data['reps'],
-        weight=data['weight'],
-        rpe=data.get('rpe')
-    )
-
-    db.session.add(new_log)
-    db.session.commit()
-    return jsonify({"message": "Exercise logged successfully", "id": new_log.id}), 201
-"""

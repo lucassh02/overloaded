@@ -1,3 +1,10 @@
+"""
+Overloaded — database models
+
+Defines the SQLAlchemy schema: users, workout sessions, exercises, the
+per-exercise log entries that make up a session, and routine templates.
+"""
+
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -8,10 +15,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(50), nullable=False, unique=True)
     email = db.Column(db.String(100), nullable=False, unique=True)
-    password_hash = db.Column(db.String(100), nullable=False, unique=True)
+    password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
-
-    
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -21,7 +26,7 @@ class Workout_Sessions(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.DateTime, nullable=False)
-    duration = db.Column(db.Integer, nullable=False)
+    duration = db.Column(db.Integer, nullable=False) #currently vestigial 
     workout_type = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
@@ -31,7 +36,8 @@ class Workout_Sessions(db.Model):
 class Exercises(db.Model):
     __tablename__ = 'exercises'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    #null exercise is global standard exercise/ with user.id is user created exercuse
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True) 
     name = db.Column(db.String(50), nullable=False)
     muscle_group = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -48,7 +54,7 @@ class Exercise_Log(db.Model):
     reps = db.Column(db.Integer, nullable=False)
     weight = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
-    rpe = db.Column(db.Integer)
+    rpe = db.Column(db.Integer) #optional
 
     def __repr__(self):
         return f'<Exercise_Log {self.id}>'
