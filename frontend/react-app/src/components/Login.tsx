@@ -35,23 +35,13 @@ const Login: React.FC = () => {
       setError(null); // Clear any previous errors
 
       if (auth) {
-        console.log("Navigating to dashboard...");
         await auth.login(sanitizedEmail, password);
         navigate("/dashboard");
-        console.log("Navigation complete.");
       }
     } catch (err: any) {
-      console.error("Login error:", err);
-      console.log("Error object:", err);
-
-      // Handle backend error response
-      if (err.response && err.response.data && err.response.data.error) {
-        setError(err.response.data.error);
-      } else if (err.message) {
-        setError(err.message);
-      } else {
-        setError("An unexpected error occurred. Please try again.");
-      }
+      setError(
+        err.message || "An unexpected error occurred. Please try again.",
+      );
     } finally {
       setLoading(false);
     }

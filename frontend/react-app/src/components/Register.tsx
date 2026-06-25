@@ -16,7 +16,7 @@ const Register: React.FC = () => {
     e.preventDefault();
 
     const sanitizedEmail = email.trim().toLowerCase();
-    const sanitizedUsername = username.trim().toLocaleLowerCase();
+    const sanitizedUsername = username.trim().toLowerCase();
 
     if (!sanitizedUsername || !sanitizedEmail || !password) {
       setError("Please fill out all fields.");
@@ -38,12 +38,9 @@ const Register: React.FC = () => {
       });
       navigate("/login");
     } catch (err: any) {
-      if (err.message) {
-        setError(err.message); // Display the error message from the backend
-      } else {
-        setError("An unexpected error occurred. Please try again.");
-      }
-      console.error("Registration failed", err);
+      setError(
+        err.message || "An unexpected error occurred. Please try again.",
+      );
     } finally {
       setLoading(false);
     }

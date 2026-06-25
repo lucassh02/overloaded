@@ -1,3 +1,6 @@
+// Shapes returned by and sent to the backend API.
+// Kept in sync with the Flask routes in app.py.
+
 export interface User {
   id: string;
   username: string;
@@ -16,6 +19,7 @@ export interface AuthContextType {
   logout: () => void;
 }
 
+// A logged exercise as returned from the server (rpe may be null in the DB).
 export interface LoggedExercise {
   name: string;
   sets: number;
@@ -24,6 +28,7 @@ export interface LoggedExercise {
   rpe: number | null;
 }
 
+// A full workout session with its exercises, as returned by GET /workouts.
 export interface Workout {
   id: number;
   date: string;
@@ -31,6 +36,7 @@ export interface Workout {
   exercises: LoggedExercise[];
 }
 
+// A single exercise entry as sent to the server when logging a workout.
 export interface ExerciseEntry {
   exercise_id: number;
   sets: number;
@@ -39,6 +45,7 @@ export interface ExerciseEntry {
   rpe: number;
 }
 
+// An exercise option for the dropdown (id + name only).
 export interface ExerciseOption {
   id: number;
   name: string;

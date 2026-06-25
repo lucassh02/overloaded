@@ -8,7 +8,6 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   const auth = useAuth();
 
   if (!auth?.token) {
-    console.log("User not authenticated. Redirecting to login...");
     return <Navigate to="/login" />;
   }
 
