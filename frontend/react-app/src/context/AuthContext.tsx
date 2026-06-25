@@ -9,36 +9,35 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+/**
+ * Provides authentication state (current user + JWT token) to the whole app.
+ * Token and user are persisted to localStorage so the session survives a refresh.
+ * On load, the stored token is used to re-fetch the user's profile from the
+ * server — this keeps the profile fresh and verifies the token is still valid.
+ */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useLocalStorage<User | null>("user", null);
   const [token, setToken] = useLocalStorage<string | null>("token", null);
 
   useEffect(() => {
-    if (token) {
-      const userId = localStorage.getItem("userId");
-      if (userId) {
-        console.log("Token before fetching profile:", token);
-        console.log("User ID before fetching profile:", userId);
-        getUserProfile(Number(userId), token)
-          .then((res) => setUser(res))
-          .catch(() => logout());
-      }
-    }
+    if (!token) return;
+
+    // The user object (with its id) was persisted at login; read the id from it.
+    const stored = localStorage.getItem("user");
+    const storedUser = stored ? JSON.parse(stored) : null;
+    if (!storedUser?.id) return;
+
+    getUserProfile(Number(storedUser.id), token)
+      .then((freshUser) => setUser(freshUser))
+      .catch(() => logout()); // token rejected/expired → clear the session
   }, [token]);
 
   const login = async (email: string, password: string) => {
-    try {
-      const res = await loginUser({ email, password });
+    const res = await loginUser({ email, password });
+    if (!res.access_token) throw new Error("No token received");
 
-      console.log("Login response:", res); // Debugging line
-      if (!res.access_token) throw new Error("No token received");
-
-      setToken(res.access_token);
-      setUser({ id: res.user_id, username: "", email });
-    } catch (error) {
-      console.error("Login failed", error);
-      throw error; // Ensure the error propagates to Login.tsx
-    }
+    setToken(res.access_token);
+    setUser({ id: res.user_id, username: "", email });
   };
 
   const logout = () => {
